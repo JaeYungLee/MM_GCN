@@ -6,23 +6,6 @@ import torch.backends.cudnn as cudnn
 from Data.Human36M.Human36M import dataset
 from common.graph_utils import adj_mx_from_skeleton
 
-class AverageMeter(object):
-    """Computes and stores the average and current value"""
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
-        self.count = 0
-
-    def update(self, val, n=1):
-        self.val = val
-        self.sum += val
-        self.count += n
-        self.avg = self.sum / self.count
-
 def main():
     cfg.set_args(cfg.gpu_ids, cfg.continue_train)
     cudnn.fastest = True
