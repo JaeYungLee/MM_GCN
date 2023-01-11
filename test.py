@@ -1,3 +1,9 @@
+'''
+# This source code is written by Lee Jae Yung
+# Some source code is borrowed from Modulate-GCN & VideoPose3D
+# E-Mail : ljy321456@gmail.com
+'''
+
 import numpy as np
 from config import cfg
 import torch
