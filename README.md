@@ -10,7 +10,7 @@ This repository is build upon Python v3.6 and Pytorch v1.8.2 on Ubuntu 18.04. Al
 2D detections for Human3.6M datasets are provided by [VideoPose3D](https://github.com/facebookresearch/VideoPose3D) Pavllo et al.
 
 ### Pre-trained models
-The pre-trained models can be downloaded from [Google Drive](https://drive.google.com/file/d/1XLr6CHkhMEldYkAA74EY6Wg6KWFLwD3z/view?usp=share_link).
+The pre-trained models for 3-hops can be downloaded from [Google Drive](https://drive.google.com/file/d/1XLr6CHkhMEldYkAA74EY6Wg6KWFLwD3z/view?usp=share_link).
 
 ### Evaluation (GT)
 ```c
