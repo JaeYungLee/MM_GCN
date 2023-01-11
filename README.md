@@ -6,5 +6,5 @@ This repository holds the Pytorch implementation of [Multi-hop Modulated Graph C
 ### GT Evaluation
 ```c
 Human3.6M Dataset
-python test.py -d Human36M -k gt -sk 2 -c ${CHECKPOINT_PATH} --test_model {MODEL_PATH} -ch {CHANNEL_NUM} -j_out 17 -g {GPU_IDX}
+python test.py -d Human36M -k gt -sk {HOP_NUM} -c ${CHECKPOINT_PATH} --test_model {MODEL_PATH} -ch {CHANNEL_NUM} -j_out 17 -g {GPU_IDX}
 ```
