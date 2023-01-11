@@ -16,3 +16,13 @@ The pre-trained models can be downloaded from [Google Drive](https://drive.googl
 Human3.6M Dataset
 python test.py -d Human36M -k gt -sk {HOP_NUM} -c ${CHECKPOINT_PATH} --test_model {MODEL_PATH} -ch {CHANNEL_NUM} -j_out 17 -g {GPU_IDX}
 ```
+
+## Reference
+```c
+@inproceedings{lee22multi,
+ author = {Jae Yung Lee and I Gil Kim},
+ booktitle = {Proceedings of the British Machine Vision Conference ({BMVC})},
+ title = {Multi-hop Modulated Graph Convolutional Networks for 3D Human Pose Estimation},
+ year = {2022}
+}
+```
