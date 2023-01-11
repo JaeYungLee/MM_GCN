@@ -33,4 +33,4 @@ Part of our code is borrowed from the following repositories.
 - [Modulated GCN](https://github.com/ZhimingZo/Modulated-GCN)
 - [VideoPose3D](https://github.com/facebookresearch/VideoPose3D)
 
-e thank to the authors for releasing their codes. Please also consider citing their works.
+We thank to the authors for releasing their codes. Please also consider citing their works.
