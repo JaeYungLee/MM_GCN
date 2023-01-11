@@ -1,0 +1,158 @@
+import os
+import os.path as osp
+import math
+import abc
+import numpy as np
+from torch.utils.data import DataLoader
+import torch.optim
+from common.timer import Timer
+from common.logger import colorlogger
+from torch.nn.parallel.data_parallel import DataParallel
+from config import cfg
+from common.model import get_pose_net
+from Data.dataset import DatasetLoader, PoseBuffer
+from Data.multiple_datasets import MultipleDatasets
+
+# dynamic dataset import
+exec('from ' + 'Data.' + cfg.data_set + '.' + cfg.data_set + ' import ' + cfg.data_set)
+
+class Base(object):
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, log_name='logs.txt'):
+        self.cur_epoch = 0
+        # timer
+        self.tot_timer = Timer()
+        self.gpu_timer = Timer()
+        self.read_timer = Timer()
+        # logger
+        self.logger = colorlogger(cfg.log_dir, log_name=log_name)
+
+    @abc.abstractmethod
+    def _make_batch_generator(self):
+        return
+
+    @abc.abstractmethod
+    def _make_model(self):
+        return
+
+    def save_model(self, state, file_name):
+        file_path = osp.join(cfg.model_dir, file_name)
+        torch.save(state, file_path)
+        self.logger.info("Write snapshot into {}".format(file_path))
+
+    def load_model(self, model, optimizer, file_name):
+        ckpt = torch.load(osp.join(cfg.model_dir, file_name))
+        start_epoch = ckpt['epoch'] + 1
+        model.load_state_dict(ckpt['network'])
+        optimizer.load_state_dict(ckpt['optimizer'])
+
+        return start_epoch, model, optimizer
+
+class Trainer(Base):
+    def __init__(self):
+        super(Trainer, self).__init__(log_name='train_logs.txt')
+
+    def get_optimizer(self, model):
+        optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr, amsgrad=True)
+        return optimizer
+
+    def set_lr(self, epoch, cur_lr):
+        for e in cfg.lr_dec_epoch:
+            if epoch < e:
+                break
+        if epoch < cfg.lr_dec_epoch[-1]:
+            idx = cfg.lr_dec_epoch.index(e)
+            for g in self.optimizer.param_groups:
+                g['lr'] = cfg.lr / (cfg.lr_dec_factor ** idx)
+        else:
+            if epoch % 4 == 0:
+                for g in self.optimizer.param_groups:
+                    g['lr'] = cur_lr * 0.95
+
+    def get_lr(self):
+        for g in self.optimizer.param_groups:
+            cur_lr = g['lr']
+        return cur_lr
+
+    def _make_batch_generator(self):
+        # data load and construct batch generator
+        self.logger.info("Creating dataset...")
+        trainset3d_loader = []
+        trainset3d_loader.append(DatasetLoader(eval(cfg.data_set)("train"), True, cfg.data_set))
+        trainset_loader = MultipleDatasets(trainset3d_loader, make_same_len=False)
+
+        self.itr_per_epoch = math.ceil(len(trainset_loader) / cfg.num_gpus / cfg.batch_size)
+        self.batch_generator = DataLoader(dataset=trainset_loader, batch_size=cfg.num_gpus * cfg.batch_size,
+                                          shuffle=True, num_workers=cfg.num_thread, pin_memory=True)
+
+    def _make_model(self, adj, adj_ext1=None, adj_ext2=None, adj_ext3=None, adj_ext4=None):
+        # prepare network
+        self.logger.info("Creating graph and optimizer...")
+        model = get_pose_net(cfg, adj, adj_ext1, adj_ext2, adj_ext3, adj_ext4)
+        model = DataParallel(model).cuda()
+        optimizer = self.get_optimizer(model)
+        start_epoch = 0
+        model.train()
+
+        model_params = 0
+        for parameter in model.parameters():
+            model_params += parameter.numel()
+        num_param = ['%s: %.4f' % ('Trainable parameter count(M) : ', model_params / 1000000)]
+        self.logger.info(' '.join(num_param))
+
+        self.start_epoch = start_epoch
+        self.model = model
+        self.optimizer = optimizer
+
+
+class Tester(Base):
+    def __init__(self, test_model, test_root_model=None, is_train=False):
+        self.test_model = test_model
+        self.is_train = is_train
+        super(Tester, self).__init__(log_name='test_logs.txt')
+
+    def _make_batch_generator(self):
+        # data load and construct batch generator
+        self.logger.info("Creating dataset...")
+        testset = eval(cfg.data_set)("test")
+        testset_loader = DatasetLoader(testset, False, cfg.data_set)
+        batch_generator = DataLoader(dataset=testset_loader, batch_size=cfg.num_gpus * cfg.test_batch_size,
+                                     shuffle=False, num_workers=cfg.num_thread, pin_memory=True)
+
+        self.itr_per_epoch = math.ceil(len(testset_loader) / cfg.num_gpus / cfg.batch_size)
+        self.testset = testset
+        self.batch_generator = batch_generator
+
+    def _make_model(self, adj, adj_ext1=None, adj_ext2=None, adj_ext3=None, adj_ext4=None):
+        if self.is_train:
+            model = get_pose_net(cfg, adj, adj_ext1, adj_ext2, adj_ext3, adj_ext4)
+            model = DataParallel(model).cuda()
+            model.eval()
+        else:
+            model_path = os.path.join(cfg.model_dir, self.test_model)
+            assert os.path.exists(model_path), 'Cannot find model at ' + model_path
+            self.logger.info('Load checkpoint from {}'.format(model_path))
+            # prepare network
+            self.logger.info("Creating graph...")
+            model = get_pose_net(cfg, adj, adj_ext1, adj_ext2, adj_ext3, adj_ext4)
+            model = DataParallel(model).cuda()
+            ckpt = torch.load(model_path)
+            model.load_state_dict(ckpt['network'])
+            model.eval()
+
+            model_params = 0
+            for parameter in model.parameters():
+                model_params += parameter.numel()
+            num_param = ['%s: %.4f' % ('INFO: Test parameter count(M) : ', model_params / 1000000)]
+            self.logger.info(' '.join(num_param))
+
+        self.model = model
+
+    def _evaluate(self, preds, result_save_path):
+        error = self.testset.evaluate(preds, result_save_path, self.logger)
+        return error
+
+    def _visualize(self, preds, result_save_path):
+        self.testset.visualization(preds, result_save_path, self.logger)
+
