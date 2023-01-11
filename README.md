@@ -2,8 +2,15 @@
 This repository holds the Pytorch implementation of [Multi-hop Modulated Graph Convolutional Networks for 3D Human Pose Estimation](https://bmvc2022.mpi-inf.mpg.de/0207.pdf) by Jae Yung Lee and I Gil Kim.
 
 ## Quick Start
-### Evaluating our pre-trained models
-### GT Evaluation
+This repository is build upon Python v3.6 and Pytorch v1.8.2 on Ubuntu 18.04. All experiments are conducted on a single NVIDIA RTX QUADRO 6000 GPU. See requirements.txt for other dependencies. We recommend installing Python v3.6 from Anaconda and installing Pytorch (>= 1.8.0) following guide on the official instructions according to your specific CUDA version. Then you can install dependencies with the following commands.
+
+### Dataset 
+You can find the instructions for setting up the Human3.6M and results of 2D detections in data/README.md. The code for data preparation is borrowed from VideoPose3D.
+
+### Pre-trained models
+The pre-trained models can be downloaded from [Google Drive](https://drive.google.com/file/d/1XLr6CHkhMEldYkAA74EY6Wg6KWFLwD3z/view?usp=share_link).
+
+### Evaluation
 ```c
 Human3.6M Dataset
 python test.py -d Human36M -k gt -sk {HOP_NUM} -c ${CHECKPOINT_PATH} --test_model {MODEL_PATH} -ch {CHANNEL_NUM} -j_out 17 -g {GPU_IDX}
