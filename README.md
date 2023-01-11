@@ -11,7 +11,7 @@ This repository is build upon Python v3.6 and Pytorch v1.8.2 on Ubuntu 18.04. Al
 ### Pre-trained models
 The pre-trained models can be downloaded from [Google Drive](https://drive.google.com/file/d/1XLr6CHkhMEldYkAA74EY6Wg6KWFLwD3z/view?usp=share_link).
 
-### Evaluation
+### Evaluation (GT)
 ```c
 Human3.6M Dataset
 python test.py -d Human36M -k gt -sk {HOP_NUM} -c ${CHECKPOINT_PATH} --test_model {MODEL_PATH} -ch {CHANNEL_NUM} -j_out 17 -g {GPU_IDX}
